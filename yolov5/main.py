@@ -95,7 +95,7 @@ if __name__ == '__main__':
     second = sleep_time(0,0,5)
 
     try:
-        #while True:
+        while True:
             opt = parse_opt()
             save_dir = main(opt)
             create_table()
