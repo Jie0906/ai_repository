@@ -7,6 +7,7 @@ from pathlib import Path
 import json
 import torch
 import torch.backends.cudnn as cudnn
+from db_related import DbHandler
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -23,7 +24,7 @@ from utils.torch_utils import select_device, time_sync
 
 
 @torch.no_grad()
-def run(
+def run(cursor,
         weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
         source=ROOT / 'data/images',  # file/dir/URL/glob, 0 for webcam
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
@@ -49,7 +50,7 @@ def run(
         hide_labels=False,  # hide labels
         hide_conf=False,  # hide confidences
         half=False,  # use FP16 half-precision inference
-        dnn=False,  # use OpenCV DNN for ONNX inference
+        dnn=False,  # use OpenCV DNN for ONNX inference,
 ):
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -141,10 +142,8 @@ def run(
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # Write results
-
-                vector_dict = {}
-                content_json = []
-                save_json = True
+                save_json = False
+                data_content = []
                 detect_result = False
                 other_object = False
                 file_name = save_path.split('//')
@@ -152,51 +151,54 @@ def run(
                 image_time = p.stem.split('.')[1]
 
                 for *xyxy, conf, cls in reversed(det):
-                    if save_json:  # Write to file
-                        x1=int(xyxy[0].item())
-                        y1=1080 - int(xyxy[1].item())
-                        x2=int(xyxy[2].item())
-                        y2=1080 - int(xyxy[3].item())
-                        mid1 = int((x1+x2)/2)
-                        mid2 = int((y1+y2)/2)
-                        conf = int(conf*100)
-                        class_index=cls#获取属性
-                        object_type=names[int(cls)]
+                    x1=int(xyxy[0].item())
+                    y1=1080 - int(xyxy[1].item())
+                    x2=int(xyxy[2].item())
+                    y2=1080 - int(xyxy[3].item())
+                    center1 = int((x1+x2)/2)
+                    center2 = int((y1+y2)/2)
+                    confidence = int(conf*100)
+                    class_index=cls#获取属性
+                    object_type=names[int(cls)]
 
-                        if(object_type == 'box'):
-                            detect_result = True
+                    if(object_type == 'box'):
+                        detect_result = True
+                    
+                    if(object_type != 'box'):
+                        other_object = True
+                    temp_dic = {
+                        'camera_id': str(camera_id),
+                        'img_filename': str(p.stem),
+                        'p1': str(x1)+','+str(y2),
+                        'p2': str(x2)+','+str(y2),
+                        'p3': str(x1)+','+str(y1),
+                        'p4': str(x2)+','+str(y1),
+                        'p0': str(center1)+','+str(center2),
+                        'other_object': other_object,
+                        'image_time': str(image_time),
+                        'detect_result': detect_result,
+                        'object_type': object_type,
+                        'confidence': confidence,
                         
-                        if(object_type != 'box'):
-                            other_object = True
-                        content_dic = {
-                            'camera_id': str(camera_id),
-                            'img_filename': str(p.stem),
-                            'p1': str(x1)+','+str(y2),
-                            'p2': str(x2)+','+str(y2),
-                            'p3': str(x1)+','+str(y1),
-                            'p4': str(x2)+','+str(y1),
-                            'p0': str(mid1)+','+str(mid2),
-                            'other_object': other_object,
-                            'image_time': str(image_time),
-                            'detect_result': detect_result,
-                            'object_type': object_type,
-                            'confidence': conf,
-                            
-                        }
-                        content_json.append(content_dic)
-                        
-                    if save_img or save_crop or view_img:
-                        c = int(cls)  # integer class
-                        label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
-                        annotator.box_label(xyxy, label, color=colors(c, True))
-                       
-        
-                    if save_crop:
-                        save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                    }
+                    data_content.append(temp_dic)
+            
+                    
+                if save_img or save_crop or view_img:
+                    c = int(cls)  # integer class
+                    label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
+                    annotator.box_label(xyxy, label, color=colors(c, True))
 
+                #是否保存裁剪预测框圖片
+                if save_crop:
+                    save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                #write .json file            
+                if save_json:
+                    with open((location_center_path+'.json'),  'a') as f:
+                        json.dump(data_content, f)
 
-                with open((location_center_path+'.json'), 'a') as f:
-                    json.dump(content_json, f)
+                #insert database
+                DbHandler(cursor).insert_database(data_content)
 
             # Stream results
             im0 = annotator.result()
@@ -208,7 +210,7 @@ def run(
                 cv2.imshow(str(p), im0)
                 cv2.waitKey(1)  # 1 millisecond
 
-            # Save results (image with detections)
+            # Save results (image with detections) 儲存圖+顯示框
             # if save_img:
             #     if dataset.mode == 'image':
             #         cv2.imwrite(save_path, im0)
@@ -276,13 +278,16 @@ def parse_opt():
     return opt
 
 
-def main(opt):
+def main(cursor ,opt):
     check_requirements(exclude=('tensorboard', 'thop'))
-    save_dir = run(**vars(opt))
+    run(cursor,**vars(opt))
 
 
-    return save_dir
 
+
+    #save_dir = run(cursor,**vars(opt))
+    #return save_dir
+ 
 
 
 
