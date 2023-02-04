@@ -11,7 +11,7 @@ class DeleteFile(object):
     def __init__(self,path):
         self.path = path
 
-    def delete_local_file(self):
+    def delete_local_file(self): #刪除本地資料
         """
         删除文件
         :param path: 文件路径
@@ -44,7 +44,7 @@ class DeleteFile(object):
                             os.removedirs(path2)
                 
                         else:
-                            # 为文件夹时,添加到列表中。再次循环。l = ['E:\python_script\day26\test']
+                            # 为文件夹时,添加到列表中。再次循环
                             file_list.append(path2)
 
             return True
@@ -53,7 +53,7 @@ class DeleteFile(object):
             return False
 
 
-    def  delete_database():
+    def  delete_database(): #刪除資料庫資料
         load_dotenv()
         host = os.getenv('DB_HOST')
         port = os.getenv('DB_PORT')
@@ -64,7 +64,7 @@ class DeleteFile(object):
         conn = psycopg2.connect(conn_string)
         conn.autocommit = True
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM agv WHERE create_at < (now() - '1 min'::interval);")
+        cursor.execute("DELETE FROM agv WHERE create_at < (now() - '1 hour'::interval);") #刪除資料庫一小時前的資料
 
 
 
@@ -75,7 +75,7 @@ class DeleteFile(object):
 
 if __name__ == '__main__':
     try:
-        #del_result = DeleteFile('C:/Users/user/Desktop/yolo_box/yolov5/runs/detect').delete()
+        del_result = DeleteFile('C:/Users/user/Desktop/yolo_box/yolov5/runs/detect').delete_local_file()
         DeleteFile.delete_database()
         print("Deleted db_data sucessfully!")
 

@@ -36,7 +36,7 @@ def run(cursor,
         view_img=False,  # show results
         save_txt=False,  # save results to *.txt
         save_conf=True,  # save confidences in --save-txt labels
-        save_crop=True,  # save cropped prediction boxes
+        save_crop=False,  # save cropped prediction boxes
         nosave=False,  # do not save images/videos
         classes=None,  # filter by class: --class 0, or --class 0 2 3
         agnostic_nms=False,  # class-agnostic NMS
@@ -60,7 +60,7 @@ def run(cursor,
     if is_url and is_file:
         source = check_file(source)  # download
 
-    # Directories
+    # Directories 
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 

@@ -30,6 +30,12 @@ if __name__ == '__main__':
         cursor = conn.cursor()
         second = DbHandler.sleep_time(0,0,5)
         
+
+        #程式邏輯:
+        # 1.建立table(若已存在則忽略)
+        # 2.進行預測並寫入資料庫
+        # 3.睡眠5秒
+        
         while True:
             DbHandler(cursor).create_table()
             opt = parse_opt()
