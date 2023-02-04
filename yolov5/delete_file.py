@@ -4,13 +4,14 @@ import datetime
 import logging
 import time
 import psycopg2
+from dotenv import load_dotenv
 
 
 class DeleteFile(object):
     def __init__(self,path):
         self.path = path
 
-    def delete(self):
+    def delete_local_file(self): #刪除本地資料
         """
         删除文件
         :param path: 文件路径
@@ -43,7 +44,7 @@ class DeleteFile(object):
                             os.removedirs(path2)
                 
                         else:
-                            # 为文件夹时,添加到列表中。再次循环。l = ['E:\python_script\day26\test']
+                            # 为文件夹时,添加到列表中。再次循环
                             file_list.append(path2)
 
             return True
@@ -52,31 +53,32 @@ class DeleteFile(object):
             return False
 
 
-    def  del_database():
-            host = '220.133.51.96'
-            port = '5433'
-            dbname = 'agv'
-            user = 'agvai'
-            password = 'agvai1qaz'
-            conn_string = 'host = {} port = {} user = {} dbname = {} password = {}'.format(host, port, user, dbname, password)
-            conn = psycopg2.connect(conn_string)
-            conn.autocommit = True
-            print("DB connected sucess!")
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM agv WHERE create_at < (now() - '1 hour'::interval);")
+    def  delete_database(): #刪除資料庫資料
+        load_dotenv()
+        host = os.getenv('DB_HOST')
+        port = os.getenv('DB_PORT')
+        dbname = os.getenv('DB_NAME')
+        user = os.getenv('DB_USER')
+        password = os.getenv('DB_PASSWORD')
+        conn_string = 'host = {} port = {} user = {} dbname = {} password = {}'.format(host, port, user, dbname, password)
+        conn = psycopg2.connect(conn_string)
+        conn.autocommit = True
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM agv WHERE create_at < (now() - '1 hour'::interval);") #刪除資料庫一小時前的資料
 
 
 
 
-# while True:
-#     try:
-#         ret = DeleteFile('C:/Users/user/Desktop/yolo_box/yolov5/runs/detect').delete()  # 当前目录
-#         print("Delete result: "+str(ret))
-#         print(datetime.datetime.now())
-#         time.sleep(10)
 
-#     except Exception as e:
-#         print(e)
 
-ret = DeleteFile('C:/Users/user/Desktop/yolo_box/yolov5/runs/detect').delete()
-DeleteFile.del_database()
+
+
+if __name__ == '__main__':
+    try:
+        del_result = DeleteFile('C:/Users/user/Desktop/yolo_box/yolov5/runs/detect').delete_local_file()
+        DeleteFile.delete_database()
+        print("Deleted db_data sucessfully!")
+
+    except Exception as e:
+        print("Error: ",e)
+
