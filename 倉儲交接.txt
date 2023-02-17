@@ -1,0 +1,76 @@
+安裝標記圖片工具:
+--pip install labelImg
+打開工具:
+--直接在command line 輸入labelimg即可
+
+記得打開auto_save模式:
+--View -> Aoto Save mode
+
+open Dir: 要標記的圖片來源資料夾
+change Save Dir: 儲存標記後圖片的輸出資料夾
+
+change save format :可以決定要存的檔案類型，視使用軟體挑選
+--1.PascalVOC(輸出為.xml) 
+--2.YOLO(輸出為.txt) 
+--3.CreateML(輸出為.json)
+
+標記指令:
+--w: 新增一個標記框，框選完會跳出標記物件的命名框，輸入完按ok即可
+--a: 回到上一張
+--d: 前往下一張(若有勾選auto_save即會自動儲存)
+
+YOLO訓練檔案:
+--圖片檔: yolo_box -> yolov5 -> data -> images
+--標記輸出檔(.xml): yolo_box -> yolov5 -> data -> Annotations
+*圖片檔跟輸出檔的檔案數要一樣，標記幾張就要有幾個輸出檔，很重要。
+
+若要增加訓練辨識類別:
+--建立box.yaml 改17 18行(nc:有幾類 names:類別數)
+--修改train.py 452行為box.yaml(原始為coco.yml)
+--修改voc_label.py11行(classes:打你要分的種類 跟box.yaml的names相同，順序也需相同。)
+
+訓練流程:
+--1.執行val.py(會幫你新增訓練需要的txt檔: yolo_box -> yolov5 -> data ->ImageSets -> train,trainval,val .txt )
+--2.執行voc.py(會幫你新增訓練需要的txt檔: yolo_box -> yolov5 -> data ->labels -> 有幾張訓練圖檔就有幾張.txt)
+--3.執行train.py
+--4.訓練完成後會得到訓練權重檔，在yolo_box -> yolov5 -> runs -> train -> exp xx，即可進行預測(detect.py)
+
+預測所需檔案:
+拉到最下面的parse_opt() 的前三行
+--1.訓練權重(現在是exp14)
+--2.預測照片來源(可自行更換)
+--3..yaml檔案(box.yaml)
+
+預測流程:
+--執行main.py
+
+預測運行邏輯:
+--1.建立table(若已存在則忽略)
+--2.執行detect.py進行預測並寫入資料庫
+--3.睡眠5秒(為廠商要求5秒預測一次)
+
+相關.py檔
+--detect.py: yolo的預測檔(目前工作為預測完直接寫入資料庫)
+--db_related.py: 存放操作資料庫相關function & sleep function
+--delete_file.py: 定時刪除本地&資料庫資料(目前設定為只保留一小時內資料，但因現在沒寫在本地，所以只執行刪除資料庫的部分，之後有刪除本地檔案需求可以使用。)
+
+定時刪除資料排程:
+--w10放大鏡->工作排程器->找到del_database->內容->觸發程序->編輯即可進相關設定。
+--更換檔案: 工作排程器->找到del_database->內容->動作->編輯
+
+
+資料庫相關操作:
+--使用資料庫:postgresql
+--操作UI: pgAdmin 4
+--本地密碼: hsipl206
+若要重新設定連線:
+--IP  220.133.51.96   
+--PostgreSQL Port: 5433 
+--給 AI 團隊用的帳號:agvai/agvai1qaz
+--使用table: agv
+
+目前缺少欄位:
+--area_id
+--cell_id
+--overflow
+--image_time
